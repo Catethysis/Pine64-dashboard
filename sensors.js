@@ -5,8 +5,8 @@ class sensor {
 		this.name = params.name;
 		this.path = params.path;
 		this.period = params.period || 1000;
-		this.bufLen = params.bufLen;
-		this.buf = new Buffer.alloc(this.bufLen);
+		this.buflen = params.buflen || 100;
+		this.buf = new Buffer.alloc(this.buflen);
 		fs.open(this.path, 'r', (err, fd) => {
 			if(!err) {
 				this.fd = fd;
@@ -18,7 +18,7 @@ class sensor {
 
 	process() {
 		if(this.fd) {
-			fs.read(this.fd, this.buf, 0, this.bufLen, 0, (err, count) => {
+			fs.read(this.fd, this.buf, 0, this.buflen, 0, (err, count) => {
 				if(!err) {
 					this.fired = new Date();
 					let readedData = this.buf.toString('utf8', 0, count);
@@ -29,6 +29,7 @@ class sensor {
 		}
 		setTimeout(() => this.process(), this.period);
 		console.log(this);
+		// console.log(this.data);
 	}
 
 	parse(data) {
@@ -41,7 +42,7 @@ class temp extends sensor {
 		super({
 			name: 'temp',
 			path: '/sys/devices/virtual/thermal/thermal_zone0/temp',
-			bufLen: 10
+			buflen: 10
 		});
 	}
 
@@ -55,7 +56,7 @@ class uptime extends sensor {
 		super({
 			name: 'uptime',
 			path: '/proc/uptime',
-			bufLen: 30
+			buflen: 30
 		});
 	}
 
@@ -69,7 +70,7 @@ class cpuUsage extends sensor {
 		super({
 			name: 'cpuUsage',
 			path: '/proc/stat',
-			bufLen: 400
+			buflen: 400
 		});
 	}
 
@@ -87,7 +88,7 @@ class cpuLA extends sensor {
 			name: 'load_average',
 			path: '/proc/loadavg',
 			period: 1000,
-			bufLen: 100
+			buflen: 100
 		});
 	}
 
@@ -96,9 +97,43 @@ class cpuLA extends sensor {
 	}
 }
 
+class networkStat extends sensor {
+	constructor (direction) {
+		super({
+			name: 'net' + direction.toUpperCase(),
+			path: '/sys/class/net/eth0/statistics/' + direction + '_bytes',
+			period: 1000,
+			buflen: 20
+		});
+	}
+
+	parse(data) {
+		return +data;
+	}
+}
+
+class coreFreq extends sensor {
+	constructor (core) {
+		super({
+			name: 'coreFreq' + core,
+			path: '/sys/devices/system/cpu/cpu' + core + '/cpufreq/cpuinfo_cur_freq'
+		});
+	}
+
+	parse(data) {
+		return +data;
+	}
+}
+
 let sensors = [
-	// new temp(),
-	// new uptime(),
+	new temp(),
+	new uptime(),
 	new cpuUsage(),
 	new cpuLA(),
+	new networkStat('rx'),
+	new networkStat('tx'),
+	new coreFreq(0),
+	new coreFreq(1),
+	new coreFreq(2),
+	new coreFreq(3),
 ];
