@@ -137,6 +137,21 @@ class voltage extends sensor {
   }
 }
 
+class DRAMFreq extends sensor {
+  constructor () {
+    super({
+      name: 'DRAMFreq',
+      path: '/sys/devices/1c62000.dramfreq/devfreq/dramfreq/cur_freq',
+      period: 1000,
+      buflen: 20
+    });
+  }
+
+  parse(data) {
+    return Number(data);
+  }
+}
+
 const cores = 4;
 const voltage_channels = 12;
 
@@ -147,6 +162,7 @@ let sensors = [
   new cpuLA(),
   new networkStat('eth0', 'rx'),
   new networkStat('eth0', 'tx'),
+  new DRAMFreq,
 ];
 
 for(let i = 0; i < cores; i++)
