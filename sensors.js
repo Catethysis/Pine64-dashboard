@@ -66,16 +66,17 @@ class uptime extends sensor {
 }
 
 class cpuUsage extends sensor {
-	constructor () {
+	constructor (cores) {
 		super({
 			name: 'cpuUsage',
 			path: '/proc/stat',
 			buflen: 400
 		});
+		this.cores = cores;
 	}
 
 	parse(data) {
-		return data.split('\n').slice(0, 5).map((elem) => { //change 5 to real cores number
+		return data.split('\n').slice(0, this.cores + 1).map((elem) => { //change 5 to real cores number
 			let fields = elem.split(/\s+/);
 			return {load: +fields[1] + +fields[3], total: +fields[1] + +fields[3] + +fields[4]};
 		});
@@ -98,10 +99,10 @@ class cpuLA extends sensor {
 }
 
 class networkStat extends sensor {
-	constructor (direction) {
+	constructor (iface, direction) {
 		super({
 			name: 'net' + direction.toUpperCase(),
-			path: '/sys/class/net/eth0/statistics/' + direction + '_bytes',
+			path: '/sys/class/net/' + iface + '/statistics/' + direction + '_bytes',
 			period: 1000,
 			buflen: 20
 		});
@@ -125,15 +126,16 @@ class coreFreq extends sensor {
 	}
 }
 
+const cores = 4;
+
 let sensors = [
 	new temp(),
 	new uptime(),
-	new cpuUsage(),
+	new cpuUsage(cores),
 	new cpuLA(),
-	new networkStat('rx'),
-	new networkStat('tx'),
-	new coreFreq(0),
-	new coreFreq(1),
-	new coreFreq(2),
-	new coreFreq(3),
+	new networkStat('eth0', 'rx'),
+	new networkStat('eth0', 'tx'),
 ];
+
+for(let i = 0; i < cores; i++)
+	sensors.push(new coreFreq(i));
