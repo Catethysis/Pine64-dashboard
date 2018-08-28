@@ -28,7 +28,7 @@ class sensor {
 			});
 		}
 		setTimeout(() => this.process(), this.period);
-		console.log(this);
+		// console.log(this);
 		// console.log(this.data);
 	}
 
@@ -126,7 +126,21 @@ class coreFreq extends sensor {
 	}
 }
 
+class voltage extends sensor {
+	constructor (channel) {
+		super({
+			name: 'voltage' + channel,
+			path: '/sys/class/regulator/regulator.' + channel + '/microvolts'
+		});
+	}
+
+	parse(data) {
+		return +data / 1000000;
+	}
+}
+
 const cores = 4;
+const voltage_channels = 12;
 
 let sensors = [
 	new temp(),
@@ -139,3 +153,13 @@ let sensors = [
 
 for(let i = 0; i < cores; i++)
 	sensors.push(new coreFreq(i));
+
+for(let i = 0; i < voltage_channels; i++)
+	sensors.push(new voltage(i + 1));
+
+setInterval(() => {
+	sensors.forEach((sensor) => {
+		console.log(sensor.name + ': ' + sensor.data);
+	});
+	console.log();
+}, 1000);
