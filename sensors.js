@@ -152,6 +152,24 @@ class DRAMFreq extends sensor {
   }
 }
 
+class Memory extends sensor {
+  constructor () {
+    super({
+      name: 'mem',
+      path: '/proc/meminfo',
+      period: 1000,
+      buflen: 500
+    });
+  }
+
+  parse(data) {
+    let lines = data.split('\n');
+    lines = [lines[0], lines[1], lines[13], lines[14]]; // total/free RAM, total/free swap
+    lines = lines.map(elem => elem.split(/\s+/)[1]);
+    return lines;
+  }
+}
+
 const cores = 4;
 const voltage_channels = 12;
 
@@ -163,6 +181,7 @@ let sensors = [
   new networkStat('eth0', 'rx'),
   new networkStat('eth0', 'tx'),
   new DRAMFreq,
+  new Memory,
 ];
 
 for(let i = 0; i < cores; i++)
