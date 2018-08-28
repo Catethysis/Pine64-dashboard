@@ -20,9 +20,10 @@ class sensor {
     if(this.fd) {
       fs.read(this.fd, this.buf, 0, this.buflen, 0, (err, count) => {
         if(!err) {
+          let prev_fired = this.fired;
           this.fired = new Date();
           let readedData = this.buf.toString('utf8', 0, count);
-          this.data = this.parse(readedData);
+          this.data = this.parse(readedData, prev_fired);
         } else
           throw new Error("Sensor " + this.path + " read error: " + err);
       });
@@ -106,8 +107,12 @@ class networkStat extends sensor {
     });
   }
 
-  parse(data) {
-    return Number(data);
+  parse(data, prev_fired) {
+    let total = Number(data);
+    let speed = null;
+    if(this.data)
+      speed = (total - this.data.total) / ((this.fired - prev_fired) / 1000) / 1024;
+    return {total, speed};
   }
 }
 
@@ -192,7 +197,8 @@ for(let i = 0; i < voltage_channels; i++)
 
 setInterval(() => {
   sensors.forEach((sensor) => {
-    console.log(sensor.name + ': ' + sensor.data);
+    console.log(sensor.name + ': ' + JSON.stringify(sensor.data, null, 4));
+    // console.log(sensor.name + ': ' + sensor.data);
   });
   console.log();
 }, 1000);
