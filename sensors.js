@@ -4,7 +4,7 @@ class sensor {
   constructor (params) {
     this.name = params.name;
     this.path = params.path;
-    this.period = params.period || 1000;
+    this.period_ms = params.period_ms || 1000;
     this.buflen = params.buflen || 100;
     this.buf = new Buffer.alloc(this.buflen);
     fs.open(this.path, 'r', (err, fd) => {
@@ -28,7 +28,7 @@ class sensor {
           throw new Error("Sensor " + this.path + " read error: " + err);
       });
     }
-    setTimeout(() => this.process(), this.period);
+    setTimeout(() => this.process(), this.period_ms);
   }
 
   parse(data) {
@@ -75,17 +75,11 @@ class cpuUsage extends sensor {
   }
 
   parse(data, prev_fired) {
-    // let total = Number(data);
-    // let speed = null;
-    // if(this.data)
-    //   speed = (total - this.data.total) / ((this.fired - prev_fired) / 1000) / 1024;
-      
     let current = data.split('\n').slice(0, this.cores + 1).map((elem) => { //change 5 to real cores number
       let fields = elem.split(/\s+/).map(Number);
       return {load: fields[1] + fields[3], total: fields[1] + fields[3] + fields[4]};
     });
     
-    //new Array(this.cores + 1).
     let speed = [0, 0, 0, 0, 0];
     if(this.data)
       speed = speed.map((core, i) =>
@@ -100,7 +94,7 @@ class cpuLA extends sensor {
     super({
       name: 'load_average',
       path: '/proc/loadavg',
-      period: 1000,
+      period_ms: 1000,
       buflen: 100
     });
   }
@@ -115,7 +109,7 @@ class networkStat extends sensor {
     super({
       name: 'net' + direction.toUpperCase(),
       path: '/sys/class/net/' + iface + '/statistics/' + direction + '_bytes',
-      period: 1000,
+      period_ms: 1000,
       buflen: 20
     });
   }
@@ -160,7 +154,7 @@ class DRAMFreq extends sensor {
     super({
       name: 'DRAMFreq',
       path: '/sys/devices/1c62000.dramfreq/devfreq/dramfreq/cur_freq',
-      period: 1000,
+      period_ms: 1000,
       buflen: 20
     });
   }
@@ -175,7 +169,7 @@ class Memory extends sensor {
     super({
       name: 'mem',
       path: '/proc/meminfo',
-      period: 1000,
+      period_ms: 1000,
       buflen: 500
     });
   }
@@ -188,35 +182,25 @@ class Memory extends sensor {
   }
 }
 
-createSensors = (cores, voltage_channels) => {
-  let sensors = [
-    new temp(),
-    new uptime(),
-    new cpuUsage(cores),
-    new cpuLA(),
-    new networkStat('eth0', 'rx'),
-    new networkStat('eth0', 'tx'),
-    new DRAMFreq,
-    new Memory,
-  ];
+module.exports = {
+  createSensors: function ({cores, voltage_channels, eth_interface = 'eth0'}) {
+    let sensors = [
+      new temp(),
+      new uptime(),
+      new cpuUsage(cores),
+      new cpuLA(),
+      new networkStat(eth_interface, 'rx'),
+      new networkStat(eth_interface, 'tx'),
+      new DRAMFreq,
+      new Memory,
+    ];
 
-  // for(let i = 0; i < cores; i++)
-  //   sensors.push(new coreFreq(i));
+    for(let i = 0; i < cores; i++)
+      sensors.push(new coreFreq(i));
 
-  // for(let i = 0; i < voltage_channels; i++)
-  //   sensors.push(new voltage(i + 1));
+    for(let i = 0; i < voltage_channels; i++)
+      sensors.push(new voltage(i + 1));
 
-  return sensors;
-}
-
-const cores = 4;
-const voltage_channels = 12;
-let sensors = createSensors(cores, voltage_channels);
-
-setInterval(() => {
-  sensors.forEach((sensor) => {
-    console.log(sensor.name + ': ' + JSON.stringify(sensor.data, null, 4));
-    // console.log(sensor.name + ': ' + sensor.data);
-  });
-  console.log();
-}, 1000);
+    return sensors;
+  }
+};
