@@ -74,11 +74,24 @@ class cpuUsage extends sensor {
     this.cores = cores;
   }
 
-  parse(data) {
-    return data.split('\n').slice(0, this.cores + 1).map((elem) => { //change 5 to real cores number
+  parse(data, prev_fired) {
+    // let total = Number(data);
+    // let speed = null;
+    // if(this.data)
+    //   speed = (total - this.data.total) / ((this.fired - prev_fired) / 1000) / 1024;
+      
+    let current = data.split('\n').slice(0, this.cores + 1).map((elem) => { //change 5 to real cores number
       let fields = elem.split(/\s+/).map(Number);
       return {load: fields[1] + fields[3], total: fields[1] + fields[3] + fields[4]};
     });
+    
+    //new Array(this.cores + 1).
+    let speed = [0, 0, 0, 0, 0];
+    if(this.data)
+      speed = speed.map((core, i) =>
+        (current[i].load - this.data.current[i].load) / ((this.fired - prev_fired) / 1000)
+      );
+    return {current, speed};
   }
 }
 
@@ -187,11 +200,11 @@ createSensors = (cores, voltage_channels) => {
     new Memory,
   ];
 
-  for(let i = 0; i < cores; i++)
-    sensors.push(new coreFreq(i));
+  // for(let i = 0; i < cores; i++)
+  //   sensors.push(new coreFreq(i));
 
-  for(let i = 0; i < voltage_channels; i++)
-    sensors.push(new voltage(i + 1));
+  // for(let i = 0; i < voltage_channels; i++)
+  //   sensors.push(new voltage(i + 1));
 
   return sensors;
 }
