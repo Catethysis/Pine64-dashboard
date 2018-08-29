@@ -175,25 +175,30 @@ class Memory extends sensor {
   }
 }
 
+createSensors = (cores, voltage_channels) => {
+  let sensors = [
+    new temp(),
+    new uptime(),
+    new cpuUsage(cores),
+    new cpuLA(),
+    new networkStat('eth0', 'rx'),
+    new networkStat('eth0', 'tx'),
+    new DRAMFreq,
+    new Memory,
+  ];
+
+  for(let i = 0; i < cores; i++)
+    sensors.push(new coreFreq(i));
+
+  for(let i = 0; i < voltage_channels; i++)
+    sensors.push(new voltage(i + 1));
+
+  return sensors;
+}
+
 const cores = 4;
 const voltage_channels = 12;
-
-let sensors = [
-  new temp(),
-  new uptime(),
-  new cpuUsage(cores),
-  new cpuLA(),
-  new networkStat('eth0', 'rx'),
-  new networkStat('eth0', 'tx'),
-  new DRAMFreq,
-  new Memory,
-];
-
-for(let i = 0; i < cores; i++)
-  sensors.push(new coreFreq(i));
-
-for(let i = 0; i < voltage_channels; i++)
-  sensors.push(new voltage(i + 1));
+let sensors = createSensors(cores, voltage_channels);
 
 setInterval(() => {
   sensors.forEach((sensor) => {
